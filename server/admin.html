@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UniWall Admin Panel</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0F172A;color:#E2E8F0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;min-height:100vh}
+.login-container{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.login-box{background:#1E293B;border:1px solid #A855F7;border-radius:16px;padding:40px;max-width:400px;width:100%;text-align:center}
+.login-box h1{color:#A855F7;font-size:28px;margin-bottom:8px}
+.login-box p{color:#94A3B8;margin-bottom:24px;font-size:14px}
+.login-box input{width:100%;padding:12px 16px;background:#0F172A;border:1px solid #334155;border-radius:8px;color:#E2E8F0;font-size:14px;margin-bottom:16px;outline:none}
+.login-box input:focus{border-color:#A855F7}
+.login-box button{width:100%;padding:12px;background:#A855F7;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer;font-weight:600}
+.login-box button:hover{background:#9333EA}
+.app{display:none}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:240px;background:#1E293B;border-right:1px solid #334155;padding:20px 0;overflow-y:auto}
+.sidebar h2{color:#A855F7;padding:0 20px;margin-bottom:24px;font-size:22px}
+.sidebar .nav-item{display:flex;align-items:center;padding:12px 20px;color:#94A3B8;cursor:pointer;font-size:14px;transition:all .2s;border-left:3px solid transparent}
+.sidebar .nav-item:hover,.sidebar .nav-item.active{background:#0F172A;color:#E2E8F0;border-left-color:#A855F7}
+.sidebar .nav-item svg{width:18px;height:18px;margin-right:10px;fill:currentColor}
+.main{margin-left:240px;padding:24px;min-height:100vh}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+.header h1{font-size:24px;color:#E2E8F0}
+.header .logout{padding:8px 16px;background:#EF4444;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:#1E293B;border:1px solid #334155;border-radius:12px;padding:20px;text-align:center}
+.stat-card .number{font-size:36px;font-weight:700;color:#A855F7}
+.stat-card .label{color:#94A3B8;font-size:13px;margin-top:4px}
+.card{background:#1E293B;border:1px solid #334155;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#A855F7;margin-bottom:16px;font-size:18px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:10px 12px;border-bottom:1px solid #334155;color:#94A3B8;font-size:12px;text-transform:uppercase}
+td{padding:10px 12px;border-bottom:1px solid #1E293B;font-size:13px;color:#CBD5E1}
+tr:hover td{background:#0F172A}
+.btn{padding:6px 14px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600}
+.btn-danger{background:#EF4444;color:white}
+.btn-danger:hover{background:#DC2626}
+.btn-primary{background:#A855F7;color:white}
+.btn-primary:hover{background:#9333EA}
+.btn-success{background:#22C55E;color:white}
+.btn-warn{background:#F59E0B;color:#0F172A}
+.badge{padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}
+.badge-active{background:#22C55E22;color:#22C55E}
+.badge-inactive{background:#EF444422;color:#EF4444}
+.badge-reported{background:#F59E0B22;color:#F59E0B}
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:#1E293B;border:1px solid #A855F7;border-radius:16px;padding:28px;max-width:560px;width:90%;max-height:90vh;overflow-y:auto}
+.modal h3{color:#A855F7;margin-bottom:20px;font-size:20px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;color:#94A3B8;font-size:12px;margin-bottom:4px;text-transform:uppercase}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 12px;background:#0F172A;border:1px solid #334155;border-radius:8px;color:#E2E8F0;font-size:14px;outline:none}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:#A855F7}
+.form-group textarea{height:80px;resize:vertical}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.section{display:none}
+.section.active{display:block}
+.empty{text-align:center;padding:40px;color:#64748B}
+.truncate{max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:768px){.sidebar{width:60px}.sidebar h2,.sidebar .nav-item span{display:none}.sidebar .nav-item{justify-content:center;padding:12px}.main{margin-left:60px}}
+</style>
+</head>
+<body>
+<div class="login-container" id="loginView">
+<div class="login-box">
+<h1>UniWall Admin</h1>
+<p>Enter admin password to access the panel</p>
+<input type="password" id="adminPassword" placeholder="Admin Password" onkeydown="if(event.key==='Enter')doLogin()">
+<button onclick="doLogin()">Login</button>
+<p id="loginError" style="color:#EF4444;margin-top:12px;display:none"></p>
+</div>
+</div>
+
+<div class="app" id="appView">
+<div class="sidebar">
+<h2>UniWall</h2>
+<div class="nav-item active" onclick="showSection('dashboard')"><svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg><span>Dashboard</span></div>
+<div class="nav-item" onclick="showSection('posts')"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg><span>Posts</span></div>
+<div class="nav-item" onclick="showSection('users')"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg><span>Users</span></div>
+<div class="nav-item" onclick="showSection('ads')"><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg><span>Ads</span></div>
+<div class="nav-item" onclick="showSection('reels')"><svg viewBox="0 0 24 24"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg><span>Reels</span></div>
+</div>
+
+<div class="main">
+<div class="header">
+<h1 id="sectionTitle">Dashboard</h1>
+<button class="logout" onclick="doLogout()">Logout</button>
+</div>
+
+<div class="section active" id="section-dashboard">
+<div class="stats-grid" id="statsGrid"></div>
+</div>
+
+<div class="section" id="section-posts">
+<div class="card"><h3>All Posts</h3><div id="postsTable"></div></div>
+</div>
+
+<div class="section" id="section-users">
+<div class="card"><h3>All Users</h3><div id="usersTable"></div></div>
+</div>
+
+<div class="section" id="section-ads">
+<div style="margin-bottom:16px"><button class="btn btn-primary" onclick="openAdModal()">+ Create Ad</button></div>
+<div class="card"><h3>All Ads</h3><div id="adsTable"></div></div>
+</div>
+
+<div class="section" id="section-reels">
+<div class="card"><h3>All Reels</h3><div id="reelsTable"></div></div>
+</div>
+</div>
+</div>
+
+<div class="modal-overlay" id="adModal">
+<div class="modal">
+<h3 id="adModalTitle">Create New Ad</h3>
+<div class="form-group"><label>Title</label><input id="adTitle" placeholder="Ad title"></div>
+<div class="form-group"><label>Type</label><select id="adType"><option value="banner">Banner</option><option value="photo">Photo</option><option value="video">Video</option><option value="interstitial">Interstitial</option></select></div>
+<div class="form-group"><label>Image URL</label><input id="adImageUri" placeholder="https://example.com/image.jpg"></div>
+<div class="form-group"><label>Video URL</label><input id="adVideoUri" placeholder="https://example.com/video.mp4"></div>
+<div class="form-group"><label>Link URL (click destination)</label><input id="adLinkUrl" placeholder="https://example.com"></div>
+<div class="form-group"><label>Placement Zone</label><select id="adPlacement"><option value="feed">In Feed (between posts)</option><option value="top_banner">Top Banner</option><option value="bottom_banner">Bottom Banner</option><option value="inbox">Inbox Screen</option><option value="profile">Profile Screen</option><option value="reels">Reels Screen</option><option value="splash">Splash/Interstitial</option><option value="comment">Comment Section</option></select></div>
+<div class="form-group"><label>Target Audience</label><select id="adUniversity"><option value="">Global (All Universities)</option><option value="nust">NUST</option><option value="fast">FAST-NUCES</option><option value="lums">LUMS</option><option value="pu">Punjab University</option><option value="uet">UET Lahore</option><option value="comsats">COMSATS</option><option value="aku">Aga Khan University</option><option value="gcu">GC University</option><option value="iiu">IIUI</option><option value="quaid_e_azam">Quaid-e-Azam University</option><option value="ned">NED University</option><option value="bzu">BZU Multan</option><option value="uos">University of Sindh</option><option value="uop">University of Peshawar</option><option value="iit_bombay">IIT Bombay</option><option value="iit_delhi">IIT Delhi</option><option value="mit">MIT</option><option value="stanford">Stanford</option><option value="harvard">Harvard</option><option value="oxford">Oxford</option><option value="cambridge">Cambridge</option></select></div>
+<div class="form-group"><label>Priority (higher = shown first)</label><input type="number" id="adPriority" value="0"></div>
+<div class="modal-actions">
+<button class="btn btn-danger" onclick="closeAdModal()">Cancel</button>
+<button class="btn btn-primary" id="adSubmitBtn" onclick="submitAd()">Create</button>
+</div>
+</div>
+</div>
+
+<script>
+let token = "";
+let editingAdId = null;
+const API = window.location.origin;
+
+async function api(path,opts={}){
+  const res = await fetch(API+path,{...opts,headers:{"Content-Type":"application/json","Authorization":"Bearer "+token,...(opts.headers||{})}});
+  if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.message||"Request failed")}
+  return res.json();
+}
+
+async function doLogin(){
+  const pw=document.getElementById("adminPassword").value;
+  try{
+    const r=await api("/api/admin/login",{method:"POST",body:JSON.stringify({password:pw})});
+    token=r.token;
+    document.getElementById("loginView").style.display="none";
+    document.getElementById("appView").style.display="block";
+    loadDashboard();
+  }catch(e){
+    document.getElementById("loginError").textContent=e.message;
+    document.getElementById("loginError").style.display="block";
+  }
+}
+
+function doLogout(){
+  token="";
+  document.getElementById("loginView").style.display="flex";
+  document.getElementById("appView").style.display="none";
+}
+
+function showSection(name){
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
+  document.getElementById("section-"+name).classList.add("active");
+  document.querySelectorAll(".nav-item")[["dashboard","posts","users","ads","reels"].indexOf(name)].classList.add("active");
+  document.getElementById("sectionTitle").textContent=name.charAt(0).toUpperCase()+name.slice(1);
+  if(name==="dashboard")loadDashboard();
+  if(name==="posts")loadPosts();
+  if(name==="users")loadUsers();
+  if(name==="ads")loadAds();
+  if(name==="reels")loadReels();
+}
+
+async function loadDashboard(){
+  try{
+    const s=await api("/api/admin/stats");
+    document.getElementById("statsGrid").innerHTML=`
+      <div class="stat-card"><div class="number">${s.totalUsers}</div><div class="label">Total Users</div></div>
+      <div class="stat-card"><div class="number">${s.totalPosts}</div><div class="label">Total Posts</div></div>
+      <div class="stat-card"><div class="number">${s.totalReels}</div><div class="label">Total Reels</div></div>
+      <div class="stat-card"><div class="number">${s.totalAds}</div><div class="label">Active Ads</div></div>
+      <div class="stat-card"><div class="number">${s.totalMessages}</div><div class="label">Messages (24h)</div></div>
+    `;
+  }catch(e){console.error(e)}
+}
+
+async function loadPosts(){
+  try{
+    const posts=await api("/api/admin/posts");
+    if(!posts.length){document.getElementById("postsTable").innerHTML='<div class="empty">No posts yet</div>';return}
+    let h='<table><tr><th>Text</th><th>University</th><th>Author</th><th>Votes</th><th>Status</th><th>Actions</th></tr>';
+    posts.forEach(p=>{
+      h+=`<tr>
+        <td class="truncate">${esc(p.text)}</td>
+        <td>${esc(p.university)}</td>
+        <td>${esc(p.displayName)}</td>
+        <td>+${p.upvotes} / -${p.downvotes}</td>
+        <td>${p.reported?'<span class="badge badge-reported">Reported</span>':'<span class="badge badge-active">Active</span>'}</td>
+        <td><button class="btn btn-danger" onclick="deletePost('${p.id}')">Delete</button></td>
+      </tr>`;
+    });
+    h+='</table>';
+    document.getElementById("postsTable").innerHTML=h;
+  }catch(e){console.error(e)}
+}
+
+async function deletePost(id){
+  if(!confirm("Delete this post?"))return;
+  await api("/api/admin/posts/"+id,{method:"DELETE"});
+  loadPosts();loadDashboard();
+}
+
+async function loadUsers(){
+  try{
+    const users=await api("/api/admin/users");
+    if(!users.length){document.getElementById("usersTable").innerHTML='<div class="empty">No users yet</div>';return}
+    let h='<table><tr><th>Name</th><th>Gender</th><th>University</th><th>Joined</th><th>Actions</th></tr>';
+    users.forEach(u=>{
+      h+=`<tr>
+        <td>${esc(u.displayName)}</td>
+        <td>${esc(u.gender)}</td>
+        <td>${esc(u.university)}</td>
+        <td>${new Date(u.createdAt).toLocaleDateString()}</td>
+        <td><button class="btn btn-danger" onclick="deleteUser('${u.id}')">Delete</button></td>
+      </tr>`;
+    });
+    h+='</table>';
+    document.getElementById("usersTable").innerHTML=h;
+  }catch(e){console.error(e)}
+}
+
+async function deleteUser(id){
+  if(!confirm("Delete this user?"))return;
+  await api("/api/admin/users/"+id,{method:"DELETE"});
+  loadUsers();loadDashboard();
+}
+
+async function loadAds(){
+  try{
+    const ads=await api("/api/admin/ads");
+    if(!ads.length){document.getElementById("adsTable").innerHTML='<div class="empty">No ads yet. Click "Create Ad" to add one.</div>';return}
+    let h='<table><tr><th>Title</th><th>Type</th><th>Placement</th><th>Target</th><th>Priority</th><th>Status</th><th>Actions</th></tr>';
+    ads.forEach(a=>{
+      h+=`<tr>
+        <td>${esc(a.title)}</td>
+        <td>${esc(a.type)}</td>
+        <td>${esc(a.placement)}</td>
+        <td>${a.university?'<span class="badge badge-reported">'+esc(a.university)+'</span>':'<span class="badge badge-active">Global</span>'}</td>
+        <td>${a.priority}</td>
+        <td>${a.active?'<span class="badge badge-active">Active</span>':'<span class="badge badge-inactive">Inactive</span>'}</td>
+        <td>
+          <button class="btn btn-warn" onclick="editAd('${a.id}')">Edit</button>
+          <button class="btn ${a.active?'btn-danger':'btn-success'}" onclick="toggleAd('${a.id}',${!a.active})">${a.active?'Disable':'Enable'}</button>
+          <button class="btn btn-danger" onclick="deleteAd('${a.id}')">Delete</button>
+        </td>
+      </tr>`;
+    });
+    h+='</table>';
+    document.getElementById("adsTable").innerHTML=h;
+  }catch(e){console.error(e)}
+}
+
+let adsCache=[];
+async function editAd(id){
+  if(!adsCache.length)adsCache=await api("/api/admin/ads");
+  const a=adsCache.find(x=>x.id===id);
+  if(!a)return;
+  editingAdId=id;
+  document.getElementById("adModalTitle").textContent="Edit Ad";
+  document.getElementById("adSubmitBtn").textContent="Update";
+  document.getElementById("adTitle").value=a.title;
+  document.getElementById("adType").value=a.type;
+  document.getElementById("adImageUri").value=a.imageUri||"";
+  document.getElementById("adVideoUri").value=a.videoUri||"";
+  document.getElementById("adLinkUrl").value=a.linkUrl||"";
+  document.getElementById("adPlacement").value=a.placement;
+  document.getElementById("adUniversity").value=a.university||"";
+  document.getElementById("adPriority").value=a.priority;
+  document.getElementById("adModal").classList.add("show");
+}
+
+async function toggleAd(id,active){
+  await api("/api/admin/ads/"+id,{method:"PUT",body:JSON.stringify({active})});
+  adsCache=[];loadAds();
+}
+
+async function deleteAd(id){
+  if(!confirm("Delete this ad?"))return;
+  await api("/api/admin/ads/"+id,{method:"DELETE"});
+  adsCache=[];loadAds();loadDashboard();
+}
+
+function openAdModal(){
+  editingAdId=null;
+  document.getElementById("adModalTitle").textContent="Create New Ad";
+  document.getElementById("adSubmitBtn").textContent="Create";
+  ["adTitle","adImageUri","adVideoUri","adLinkUrl"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("adUniversity").value="";
+  document.getElementById("adType").value="banner";
+  document.getElementById("adPlacement").value="feed";
+  document.getElementById("adPriority").value="0";
+  document.getElementById("adModal").classList.add("show");
+}
+
+function closeAdModal(){document.getElementById("adModal").classList.remove("show")}
+
+async function submitAd(){
+  const data={
+    title:document.getElementById("adTitle").value,
+    type:document.getElementById("adType").value,
+    imageUri:document.getElementById("adImageUri").value||undefined,
+    videoUri:document.getElementById("adVideoUri").value||undefined,
+    linkUrl:document.getElementById("adLinkUrl").value||undefined,
+    placement:document.getElementById("adPlacement").value,
+    university:document.getElementById("adUniversity").value||undefined,
+    priority:parseInt(document.getElementById("adPriority").value)||0,
+  };
+  if(!data.title){alert("Title is required");return}
+  try{
+    if(editingAdId){
+      await api("/api/admin/ads/"+editingAdId,{method:"PUT",body:JSON.stringify(data)});
+    }else{
+      await api("/api/admin/ads",{method:"POST",body:JSON.stringify(data)});
+    }
+    closeAdModal();adsCache=[];loadAds();loadDashboard();
+  }catch(e){alert(e.message)}
+}
+
+async function loadReels(){
+  try{
+    const reels=await api("/api/admin/reels");
+    if(!reels.length){document.getElementById("reelsTable").innerHTML='<div class="empty">No reels uploaded yet</div>';return}
+    let h='<table><tr><th>Caption</th><th>University</th><th>Author</th><th>Duration</th><th>Likes</th><th>Views</th><th>Actions</th></tr>';
+    reels.forEach(r=>{
+      h+=`<tr>
+        <td class="truncate">${esc(r.caption||'(no caption)')}</td>
+        <td>${esc(r.university)}</td>
+        <td>${esc(r.displayName)}</td>
+        <td>${r.duration}s</td>
+        <td>${r.likes}</td>
+        <td>${r.views}</td>
+        <td><button class="btn btn-danger" onclick="deleteReel('${r.id}')">Delete</button></td>
+      </tr>`;
+    });
+    h+='</table>';
+    document.getElementById("reelsTable").innerHTML=h;
+  }catch(e){console.error(e)}
+}
+
+async function deleteReel(id){
+  if(!confirm("Delete this reel?"))return;
+  await api("/api/admin/reels/"+id,{method:"DELETE"});
+  loadReels();loadDashboard();
+}
+
+function esc(s){if(!s)return"";const d=document.createElement("div");d.textContent=s;return d.innerHTML}
+</script>
+</body>
+</html>
